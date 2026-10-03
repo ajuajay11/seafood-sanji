@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Neo-manga palette: parchment page, tobacco yellow, rose, manga ink. */
+@theme {
+  --color-parchment: #fdfbf7;
+  --color-mellow: #f3c63f;
+  --color-rose: #ff6584;
+  --color-ink: #000000;
+}
+
+/* The next/font variables live on <html>, so these resolve at use time. */
+@theme inline {
+  --font-display: var(--font-bangers), var(--font-dela), "Hiragino Sans", sans-serif;
+  --font-sans: var(--font-noto), "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-parchment font-sans text-ink antialiased;
+  }
+}
+
+/* Screen-tone dots, the way a printed manga page shades a panel. */
+.halftone {
+  background-image: radial-gradient(rgb(0 0 0 / 0.11) 1.1px, transparent 1.5px);
+  background-size: 14px 14px;
+}
+
+/* Heavy plank door: boards, grain and a dark seam between planks. */
+.wood {
+  background-color: #6f4220;
+  background-image:
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.55) 0 5px, transparent 5px 88px),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.05) 0 2px, transparent 2px 9px),
+    linear-gradient(90deg, #5a3418, #8a5530 45%, #6f4220);
+}
+
+/* The male branch: a harsh 0.1s cut to pitch black. */
+@keyframes cut-to-black {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cut-to-black {
+  animation: cut-to-black 0.1s steps(2, end) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cut-to-black {
+    animation: none;
+  }
+}
