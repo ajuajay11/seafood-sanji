@@ -26,7 +26,9 @@ const translations = {
     btnSubmit: "Enter Kitchen",
     zoroAngry:
       "Like hell I would ever cook a single grain of rice for a moss-headed idiot like you! Get out of my sight, Roronoa!",
+    zoroCall: "Hurry! Let's stop the mosshead — click here!",
     maleDenied: "MEN ACCESS DENIED! CLOROX THE FLOORS! GET OUT OF MY KITCHEN!",
+    otherDenied: "DOORS SHUT! THIS LOVE-STRUCK COOK ONLY HAS EYES FOR THE LADIES TODAY!",
     femaleWelcome:
       "~~~~♡ Ah! {name}-swan! Welcome to my culinary paradise! Let me personally escort you to our table! ♡~~~~",
     menuWelcome:
@@ -48,7 +50,9 @@ const translations = {
     btnSubmit: "厨房に入る",
     zoroAngry:
       "てめェのようなマリモ野郎に、米一粒でも食わせるか！俺の目の前から消え失せろ、ロロノア！",
+    zoroCall: "急げ！マリモ頭を止めるぞ — ここをクリック！",
     maleDenied: "野郎は立ち入り禁止だ！床を消毒しろ！俺の厨房から叩き出せ！",
+    otherDenied: "扉は閉めた！今日の恋するコックはレディしか目に入らねェ！",
     femaleWelcome:
       "~~~~♡ あぁ！{name}すわ〜ん！我が料理の楽園へようこそ！私がエスコートいたします！ ♡~~~~",
     menuWelcome:
@@ -347,6 +351,8 @@ type Gender = "male" | "female" | "other";
 export default function SanjiSeaKitchen() {
   const [lang, setLang] = useState<Lang>("en");
   const [phase, setPhase] = useState<Phase>("loading");
+  // Which choice slammed the door, so the lock screen shows the matching line.
+  const [deniedGender, setDeniedGender] = useState<"male" | "other">("male");
   const [frame, setFrame] = useState(0);
   const [guest, setGuest] = useState<Guest | null>(null);
   const [zoroMusic, setZoroMusic] = useState(false);
@@ -403,7 +409,7 @@ export default function SanjiSeaKitchen() {
     };
   }, []);
 
-  // STATE 3, female / other — the hearts fly, then the recipe board opens.
+  // STATE 3, female — the hearts fly, then the recipe board opens.
   useEffect(() => {
     if (phase !== "welcome") return;
     const timer = window.setTimeout(() => setPhase("menu"), 2800);
@@ -473,8 +479,9 @@ export default function SanjiSeaKitchen() {
               lang={lang}
               welcoming={phase === "welcome"}
               onToggleLang={toggleLang}
-              onDenied={() => {
+              onDenied={(denied) => {
                 setZoroMusic(false);
+                setDeniedGender(denied);
                 setPhase("denied");
               }}
               onZoro={() => setZoroMusic(true)}
@@ -487,7 +494,7 @@ export default function SanjiSeaKitchen() {
           )}
         </AnimatePresence>
 
-        {phase === "denied" && <LockScreen t={t} lang={lang} />}
+        {phase === "denied" && <LockScreen t={t} lang={lang} gender={deniedGender} />}
       </main>
       <footer
         ref={footer}
@@ -610,7 +617,7 @@ function DialogueModal({
   lang: Lang;
   welcoming: boolean;
   onToggleLang: () => void;
-  onDenied: () => void;
+  onDenied: (gender: "male" | "other") => void;
   onZoro: () => void;
   onWelcomed: (name: string) => void;
 }) {
@@ -635,7 +642,13 @@ function DialogueModal({
     event.preventDefault();
     if (!ready || !gender) return;
 
-    // THE ZORO EASTER EGG: intercepted before anything else.
+    // OTHER: whatever the name (even a Zoro), the doors slam shut with a "katcha!" and stay locked.
+    if (gender === "other") {
+      onDenied("other");
+      return;
+    }
+
+    // THE ZORO EASTER EGG: intercepted before the male and female branches.
     if (trimmed.toLowerCase().includes("zor")) {
       onZoro();
       setMood("zoro");
@@ -645,11 +658,11 @@ function DialogueModal({
 
     // THE MALE BRANCH: the kitchen locks, and nothing on screen undoes it.
     if (gender === "male") {
-      onDenied();
+      onDenied("male");
       return;
     }
 
-    // FEMALE / OTHER: hearts, a new face, and the name remembered for this tab session (up to 24 hours).
+    // FEMALE: hearts, a new face, and the name remembered for this tab session (up to 24 hours).
     const lowerName = trimmed.toLowerCase();
     if (lowerName.includes("nami")) playSound("nami");
     else if (lowerName.includes("robin")) playSound("robin");
@@ -667,7 +680,8 @@ function DialogueModal({
     { value: "other", label: t.btnOther },
   ];
 
-  if (playing) return <ZoroGame lang={lang} onClose={() => setPlaying(false)} />;
+  // Leaving the game (Back, or Escape) reloads the page for a fresh start from the homepage.
+  if (playing) return <ZoroGame lang={lang} onClose={() => window.location.reload()} />;
 
   return (
     <motion.div
@@ -743,13 +757,21 @@ function DialogueModal({
               </AnimatePresence>
 
               {mood === "zoro" && (
-                <button
-                  type="button"
-                  onClick={() => setPlaying(true)}
-                  className="mb-6 border-4 border-black bg-mellow px-5 py-3 font-display text-3xl shadow-[4px_4px_0_#000] hover:bg-rose"
-                >
-                  {lang === "ja" ? "マリモを蹴っ飛ばせ！" : "Beat the Mosshead!"}
-                </button>
+                <div className="mb-6">
+                  {/* A shouted call to action pointing down at the game button. */}
+                  <p id="zoro-call" className="mb-2 flex items-center gap-2 font-display text-xl tracking-wide text-rose sm:text-2xl">
+                    {t.zoroCall}
+                    <span aria-hidden="true" className="inline-block motion-safe:animate-bounce">↓</span>
+                  </p>
+                  <button
+                    type="button"
+                    aria-describedby="zoro-call"
+                    onClick={() => setPlaying(true)}
+                    className="w-full border-4 border-black bg-mellow px-5 py-3 font-display text-3xl shadow-[4px_4px_0_#000] hover:bg-rose"
+                  >
+                    {lang === "ja" ? "マリモを蹴っ飛ばせ！" : "Beat the Mosshead!"}
+                  </button>
+                </div>
               )}
 
               <form onSubmit={submit} noValidate>
@@ -864,8 +886,15 @@ function HeartCascade({ hearts }: { hearts: Heart[] }) {
 
 /* ─────────────────────── STATE 3, male branch: the hard lock ─────────────────────── */
 
-function LockScreen({ t, lang }: { t: Dictionary; lang: Lang }) {
+function LockScreen({ t, lang, gender }: { t: Dictionary; lang: Lang; gender: "male" | "other" }) {
   const slam = { delay: 0.12, duration: 0.3, ease: [0.55, 0, 1, 0.45] as const };
+
+  // "Katcha!": for Other, the latch clicks the moment the two doors meet (slam delay + duration).
+  useEffect(() => {
+    if (gender !== "other") return;
+    const timer = window.setTimeout(() => playSound("katcha"), (slam.delay + slam.duration) * 1000);
+    return () => window.clearTimeout(timer);
+  }, [gender, slam.delay, slam.duration]);
 
   return (
     <div
@@ -921,7 +950,7 @@ function LockScreen({ t, lang }: { t: Dictionary; lang: Lang }) {
               id="locked-message"
               className="font-display text-[clamp(2rem,6vw,3.75rem)] leading-[0.95] tracking-wide"
             >
-              {t.maleDenied}
+              {gender === "other" ? t.otherDenied : t.maleDenied}
             </p>
           </motion.div>
         </div>

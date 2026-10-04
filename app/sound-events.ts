@@ -1,4 +1,4 @@
-export type SoundCue = "nami" | "robin" | "girl" | "hit" | "kick";
+export type SoundCue = "nami" | "robin" | "girl" | "hit" | "kick" | "diable" | "katcha";
 
 export function playSound(cue: SoundCue) {
   window.dispatchEvent(new CustomEvent("sanji:sound", { detail: cue }));

@@ -15,6 +15,7 @@ type Run = {
   slow: number; aimed: boolean;
 };
 const GOAL = 4000;
+const MAX_LIVES = 3;
 /** After a win the slammed door and CLOSED sign hold this long, then the page reloads to the homepage. */
 const WIN_HOLD_MS = 2500;
 // Characters are kept short so a full jump still clears the HUD drawn over the top of the stage.
@@ -56,7 +57,7 @@ const torsoCentre = (image: HTMLImageElement) => {
 const RUN_SPEED = 300;
 const CAMERA_LEFT = 125, CAMERA_RIGHT = 420;
 const ZORO_GAP = 1000; // canvas units; the canvas spans the full viewport width, so this is 100dvw.
-const freshRun = (): Run => ({ score: 0, lives: 3, time: 0, spawn: 150, kick: 0, cooldown: 0, jump: 0, enemies: [], over: false, x: 125, started: false, won: false, door: 0, scroll: 0, charge: 0, diable: 0, special: 0, flash: 0, slow: 0, aimed: false });
+const freshRun = (): Run => ({ score: 0, lives: MAX_LIVES, time: 0, spawn: 150, kick: 0, cooldown: 0, jump: 0, enemies: [], over: false, x: 125, started: false, won: false, door: 0, scroll: 0, charge: 0, diable: 0, special: 0, flash: 0, slow: 0, aimed: false });
 
 export default function ZoroGame({ lang, onClose }: { lang: "en" | "ja"; onClose: () => void }) {
   const ja = lang === "ja";
@@ -72,7 +73,7 @@ export default function ZoroGame({ lang, onClose }: { lang: "en" | "ja"; onClose
   const [mobileControls, setMobileControls] = useState(false);
   const [portrait, setPortrait] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [hud, setHud] = useState({ score: 0, lives: 3, over: false, won: false, charge: 0, diable: 0 });
+  const [hud, setHud] = useState({ score: 0, lives: MAX_LIVES, over: false, won: false, charge: 0, diable: 0 });
   const [best, setBest] = useState(0);
   const bestRef = useRef(0);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -99,7 +100,7 @@ export default function ZoroGame({ lang, onClose }: { lang: "en" | "ja"; onClose
   const diableJambe = () => {
     const r = run.current;
     if (!blocked.current && r.started && !r.over && r.diable > 0 && r.cooldown <= 0) {
-      r.special = DIABLE_KICK; r.kick = 0; r.cooldown = 0.7; playSound("kick");
+      r.special = DIABLE_KICK; r.kick = 0; r.cooldown = 0.7; playSound("diable");
       // Slow motion only for a kick thrown at a Zoro close enough to be caught by it, not one swung at thin air.
       r.aimed = r.enemies.some((enemy) => !enemy.hit && enemy.x > r.x - 10 && enemy.x < r.x + 320);
     }
@@ -108,7 +109,7 @@ export default function ZoroGame({ lang, onClose }: { lang: "en" | "ja"; onClose
     const r = run.current;
     if (!blocked.current && r.started && !r.over && r.jump <= 0) r.jump = 0.85;
   };
-  const restart = () => { run.current = { ...freshRun(), started: true }; direction.current = 0; setStarted(true); setHud({ score: 0, lives: 3, over: false, won: false, charge: 0, diable: 0 }); };
+  const restart = () => { run.current = { ...freshRun(), started: true }; direction.current = 0; setStarted(true); setHud({ score: 0, lives: MAX_LIVES, over: false, won: false, charge: 0, diable: 0 }); };
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -322,7 +323,15 @@ export default function ZoroGame({ lang, onClose }: { lang: "en" | "ja"; onClose
           <header className="flex items-center justify-between gap-[1.4cqw] pl-[100px]">
             <h2 id="zoro-game-title" className="font-display text-[clamp(18px,3.2cqw,36px)] leading-none [text-shadow:0_0_4px_#fdfbf7,0_0_8px_#fdfbf7]">{ja ? "マリモを蹴っ飛ばせ！" : "Beat the Mosshead!"}</h2>
             <div className="flex items-center gap-[1.2cqw]">
-              <p className="border-2 border-black bg-parchment/85 px-[1cqw] py-[0.3cqw] font-bold whitespace-nowrap">{ja ? "得点" : "Points"}: {hud.score} · {ja ? "ライフ" : "Lives"}: {hud.lives} · {ja ? "最高" : "Best"}: {best}</p>
+              <p className="border-2 border-black bg-parchment/85 px-[1cqw] py-[0.3cqw] font-bold whitespace-nowrap">{ja ? "得点" : "Points"}: {hud.score} · {ja ? "最高" : "Best"}: {best}</p>
+              {/* Lives as Sanji's love hearts: a full heart per life left, an empty outline per life lost. */}
+              <p role="img" aria-label={ja ? `ライフ ${hud.lives} / ${MAX_LIVES}` : `Lives: ${hud.lives} of ${MAX_LIVES}`} className="flex items-center gap-[0.4cqw] border-2 border-black bg-parchment/85 px-[0.8cqw] py-[0.3cqw]">
+                {Array.from({ length: MAX_LIVES }, (_, index) => (
+                  <svg key={index} viewBox="0 0 24 22" aria-hidden="true" className={`size-[max(16px,1.8cqw)] transition-transform duration-300 ${index < hud.lives ? "" : "scale-90"}`}>
+                    <path d="M12 21s-8.5-5.3-10.6-10.4C-.3 6.4 2.4 1.5 6.9 1.5c2.3 0 4 1.3 5.1 3 1.1-1.7 2.8-3 5.1-3 4.5 0 7.2 4.9 5.5 9.1C20.5 15.7 12 21 12 21z" fill={index < hud.lives ? "#ff6584" : "#fff"} stroke="#000" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                ))}
+              </p>
               <button ref={closeButton} onClick={onClose} className="border-2 border-black bg-parchment px-[1.2cqw] py-[0.3cqw] font-bold">{ja ? "戻る" : "Back"}</button>
             </div>
           </header>

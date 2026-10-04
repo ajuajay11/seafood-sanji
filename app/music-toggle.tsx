@@ -9,6 +9,8 @@ const cues: Record<SoundCue, string> = {
   girl: "/audio/any_girl.mp3",
   hit: "/audio/sanjihitzoro.mp3",
   kick: "/audio/sanji_kick.mp3",
+  diable: "/audio/diable_jamble_sanji.mp3",
+  katcha: "/audio/katcha.mp3",
 };
 const voices = ["nami", "robin", "girl"] as const;
 
@@ -39,6 +41,8 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
       // A new greeting replaces the previous voice line; a kick that lands swaps its whoosh for the hit.
       if ((voices as readonly SoundCue[]).includes(cue)) for (const key of voices) players[key].pause();
       if (cue === "hit") players.kick.pause();
+      // Sanji's 2.8 s "Diable Jambe!" call plays out in full; quick follow-up kicks don't restart it.
+      if (cue === "diable" && !player.paused && !player.ended) return;
       player.currentTime = 0;
       void player.play().catch(() => {});
     };
