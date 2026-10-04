@@ -14,7 +14,7 @@ type Run = {
   /** Real seconds of slow motion left after a Diable Jambe connects; whether the current one is aimed at a Zoro. */
   slow: number; aimed: boolean;
 };
-const GOAL = 300;
+const GOAL = 4000;
 /** After a win the slammed door and CLOSED sign hold this long, then the page reloads to the homepage. */
 const WIN_HOLD_MS = 2500;
 // Characters are kept short so a full jump still clears the HUD drawn over the top of the stage.

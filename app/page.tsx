@@ -430,6 +430,21 @@ export default function SanjiSeaKitchen() {
     document.documentElement.style.overflow = overlay ? "hidden" : "";
   }, [overlay]);
 
+  // During an overlay the disclaimer footer is pinned over the bottom of the screen. Publish its
+  // height as --footer-h so the dialog can pad its scroll area and never hide content behind it
+  // (on phones the footer wraps to several lines).
+  const footer = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = footer.current;
+    if (!element) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--footer-h", `${overlay ? element.offsetHeight : 0}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(element);
+    return () => { observer.disconnect(); root.style.removeProperty("--footer-h"); };
+  }, [overlay]);
+
   return (
     <MotionConfig reducedMotion="user">
       <MusicToggle angry={zoroMusic} lang={lang} />
@@ -475,6 +490,7 @@ export default function SanjiSeaKitchen() {
         {phase === "denied" && <LockScreen t={t} lang={lang} />}
       </main>
       <footer
+        ref={footer}
         className={`border-t-2 border-black bg-parchment px-4 py-3 text-center text-xs leading-relaxed sm:text-sm ${
           overlay ? "fixed inset-x-0 bottom-0 z-[110]" : "relative"
         }`}
@@ -661,7 +677,7 @@ function DialogueModal({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex min-h-full items-center justify-center p-4 pt-12 sm:p-8">
+      <div className="flex min-h-full items-center justify-center p-4 pt-12 pb-[calc(var(--footer-h,0px)+1rem)] sm:p-8 sm:pb-[calc(var(--footer-h,0px)+2rem)]">
         <motion.section
           role="dialog"
           aria-modal="true"
@@ -893,7 +909,7 @@ function LockScreen({ t, lang }: { t: Dictionary; lang: Lang }) {
           {SLAM_SFX[lang]}
         </motion.p>
 
-        <div className="absolute inset-0 grid place-items-center p-6">
+        <div className="absolute inset-0 grid place-items-center p-6 pb-[calc(var(--footer-h,0px)+1.5rem)]">
           <motion.div
             initial={{ opacity: 0, scale: 0.4, rotate: 6 }}
             animate={{ opacity: 1, scale: 1, rotate: -2 }}
