@@ -8,7 +8,9 @@ const cues: Record<SoundCue, string> = {
   robin: "/audio/robin.mp3",
   girl: "/audio/any_girl.mp3",
   hit: "/audio/sanjihitzoro.mp3",
+  kick: "/audio/sanji_kick.mp3",
 };
+const voices = ["nami", "robin", "girl"] as const;
 
 export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en" | "ja" }) {
   const audio = useRef<HTMLAudioElement>(null);
@@ -18,7 +20,8 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
   const [gameMusic, setGameMusic] = useState(false);
   const enabledRef = useRef(false);
   const effects = useRef<Partial<Record<SoundCue, HTMLAudioElement>>>({});
-  const track = gameMusic ? "/audio/sanji_kick.mp3" : angry ? "/audio/angrywhile_zoro_appear.mp3" : "/audio/sanjibgmusic.mp3";
+  // During a run the game is silent apart from Sanji's own kicks and hits.
+  const track = angry ? "/audio/angrywhile_zoro_appear.mp3" : "/audio/sanjibgmusic.mp3";
 
   useEffect(() => {
     const players = Object.fromEntries(Object.entries(cues).map(([cue, src]) => {
@@ -33,8 +36,9 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
       const cue = (event as CustomEvent<SoundCue>).detail;
       const player = players[cue];
       if (!player) return;
-      // A new greeting replaces the previous voice line.
-      if (cue !== "hit") for (const key of ["nami", "robin", "girl"] as const) players[key].pause();
+      // A new greeting replaces the previous voice line; a kick that lands swaps its whoosh for the hit.
+      if ((voices as readonly SoundCue[]).includes(cue)) for (const key of voices) players[key].pause();
+      if (cue === "hit") players.kick.pause();
       player.currentTime = 0;
       void player.play().catch(() => {});
     };
@@ -73,14 +77,14 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
     let active = true;
     player.volume = 0.35;
     player.load();
-    if (enabled && !document.hidden) player.play().catch(() => { if (active) setFailed(true); });
+    if (enabled && !gameMusic && !document.hidden) player.play().catch(() => { if (active) setFailed(true); });
     const visibility = () => {
       if (document.hidden) player.pause();
-      else if (enabled && !player.ended) player.play().catch(() => { if (active) setFailed(true); });
+      else if (enabled && !gameMusic && !player.ended) player.play().catch(() => { if (active) setFailed(true); });
     };
     document.addEventListener("visibilitychange", visibility);
     return () => { active = false; player.pause(); document.removeEventListener("visibilitychange", visibility); };
-  }, [track, enabled]);
+  }, [track, enabled, gameMusic]);
 
   const toggle = () => {
     const player = audio.current;
@@ -94,6 +98,8 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
     }
     else {
       enabledRef.current = true;
+      // Mid-run the background track stays off; enabling just lets kick and hit effects play.
+      if (gameMusic) { setEnabled(true); return; }
       player.volume = 0.35;
       // Start from the user gesture so mobile browsers allow playback.
       player.play().then(() => setEnabled(true)).catch(() => { enabledRef.current = false; setEnabled(false); setFailed(true); });
@@ -102,7 +108,7 @@ export default function MusicToggle({ angry, lang }: { angry: boolean; lang: "en
 
   return (
     <>
-      <audio ref={audio} src={track} loop={gameMusic || !angry} preload="none" />
+      <audio ref={audio} src={track} loop={!angry} preload="none" />
       <button ref={button} type="button" onClick={toggle} aria-pressed={enabled && !failed} className="fixed top-2 left-2 z-[130] border-2 border-black bg-mellow px-3 py-1 text-xs font-bold shadow-[3px_3px_0_#000]">
         {lang === "ja" ? "音楽" : "Music"}: {failed ? (lang === "ja" ? "再試行" : "Retry") : enabled ? "ON" : "OFF"}
       </button>

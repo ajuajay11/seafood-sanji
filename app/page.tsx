@@ -10,6 +10,7 @@ import {
   animate,
   motion,
   useAnimationControls,
+  useReducedMotion,
 } from "framer-motion";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
@@ -212,6 +213,38 @@ const PORTRAITS: Record<Mood, { src: string; alt: string }> = {
   },
   other: { src: "/images/sanji_face_flirt_nosebleed.webp", alt: "Sanji, smitten, with a nosebleed" },
 };
+
+// A Zoro name gets the angry clip instead of the still: a 1 s, 12 fps shot played once in slow
+// motion, then held on its last frame. The fire still above stays as its poster and as the
+// reduced-motion fallback.
+const ANGRY_VIDEO = "/frames/angrysanji.mp4";
+const ANGRY_PLAYBACK_RATE = 0.4;
+
+function AngryClip({ alt }: { alt: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+  // Browsers reset playbackRate whenever media loads, so set both rates before playing.
+  const slowDown = () => {
+    if (!video.current) return;
+    video.current.defaultPlaybackRate = ANGRY_PLAYBACK_RATE;
+    video.current.playbackRate = ANGRY_PLAYBACK_RATE;
+  };
+  useEffect(slowDown, []);
+  return (
+    <video
+      ref={video}
+      src={ANGRY_VIDEO}
+      poster={PORTRAITS.zoro.src}
+      aria-label={alt}
+      autoPlay
+      muted
+      playsInline
+      preload="auto"
+      onLoadedMetadata={slowDown}
+      onPlay={slowDown}
+      className="absolute inset-0 h-full w-full object-cover"
+    />
+  );
+}
 
 /* Decorative sound effect for the door, drawn the way each language's comics write it. */
 const SLAM_SFX: Record<Lang, string> = { en: "SLAM!!", ja: "バタン！！" };
@@ -611,6 +644,7 @@ function DialogueModal({
   };
 
   const portrait = PORTRAITS[mood];
+  const reducedMotion = useReducedMotion();
   const genders: { value: Gender; label: string }[] = [
     { value: "male", label: t.btnMale },
     { value: "female", label: t.btnFemale },
@@ -667,14 +701,18 @@ function DialogueModal({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.35 }}
                 >
-                  <Image
-                    src={portrait.src}
-                    alt={portrait.alt}
-                    fill
-                    sizes="(min-width: 768px) 360px, 100vw"
-                    loading="eager"
-                    className="object-cover"
-                  />
+                  {mood === "zoro" && !reducedMotion ? (
+                    <AngryClip alt={portrait.alt} />
+                  ) : (
+                    <Image
+                      src={portrait.src}
+                      alt={portrait.alt}
+                      fill
+                      sizes="(min-width: 768px) 360px, 100vw"
+                      loading="eager"
+                      className="object-cover"
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -925,7 +963,7 @@ function RecipeBoard({
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12"
+      className="mx-auto w-full max-w-6xl px-4 pt-14 pb-8 sm:px-6 sm:pt-12 lg:py-12"
     >
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <Masthead compact />
@@ -934,8 +972,8 @@ function RecipeBoard({
 
       {/* Greeting banner, with the name pulled from sessionStorage */}
       <p className="mb-5 text-sm leading-relaxed text-black/70">{t.recipeNote}</p>
-      <div className="mb-10 flex items-center gap-4 border-[6px] border-black bg-mellow p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:gap-6 sm:p-6">
-        <div className="relative size-20 shrink-0 overflow-hidden rounded-full border-4 border-black bg-rose sm:size-28">
+      <div className="mb-8 flex items-center gap-3 border-4 border-black bg-mellow p-3 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:mb-10 sm:gap-6 sm:border-[6px] sm:p-6 sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="relative size-14 shrink-0 overflow-hidden rounded-full border-4 border-black bg-rose sm:size-28">
           <Image
             src={PORTRAITS.female.src}
             alt=""
@@ -950,33 +988,46 @@ function RecipeBoard({
         </p>
       </div>
 
-      {/* Asymmetric manga page: a narrow column of dishes, a wide preview panel */}
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
-        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+      {/* Desktop: an asymmetric manga page, a narrow column of dishes beside a wide preview panel.
+          Phones and tablets: the dishes become a swipeable strip of tickets right above the preview,
+          so picking one never pushes the recipe a screen away. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-8">
+        <div className="min-w-0">
+          <p aria-hidden className="mb-1 text-right text-xs font-bold tracking-wide text-black/60 lg:hidden">
+            {ja ? "スワイプで料理を選ぶ →" : "Swipe for more dishes →"}
+          </p>
+        <ul className="relative -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-5 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:snap-none lg:gap-5 lg:overflow-visible lg:p-0 [&::-webkit-scrollbar]:hidden">
           {recipes.map((recipe, index) => {
             const active = recipe.id === selected.id;
             return (
-              <li key={recipe.id}>
+              <li key={recipe.id} className="w-[min(15rem,70vw)] shrink-0 snap-start lg:w-auto">
                 <button
                   type="button"
                   aria-pressed={active}
                   aria-controls="recipe-preview"
-                  onClick={() => setSelectedId(recipe.id)}
-                  className={`block w-full border-4 border-black p-5 text-left transition duration-200 ${
+                  onClick={(event) => {
+                    setSelectedId(recipe.id);
+                    // Slide a half-hidden ticket to the start of the strip; scrolls only the strip, never the page.
+                    const ticket = event.currentTarget.parentElement, strip = ticket?.parentElement;
+                    if (ticket && strip && strip.scrollWidth > strip.clientWidth) {
+                      strip.scrollTo({ left: ticket.offsetLeft - parseFloat(getComputedStyle(strip).scrollPaddingLeft || "0"), behavior: "smooth" });
+                    }
+                  }}
+                  className={`block h-full w-full border-4 border-black p-3 text-left transition duration-200 lg:p-5 ${
                     index % 2 ? "rotate-1" : "-rotate-1"
                   } ${
                     active
-                      ? "-translate-x-1 -translate-y-1 bg-mellow shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]"
-                      : "bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:bg-parchment"
+                      ? "-translate-y-1 bg-mellow shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] lg:-translate-x-1 lg:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]"
+                      : "bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:bg-parchment lg:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
                   }`}
                 >
-                  <span className="font-display text-lg tracking-widest text-rose">
+                  <span className="font-display text-base tracking-widest text-rose lg:text-lg">
                     No.{String(index + 1).padStart(2, "0")}
                   </span>
-                  <span className="mt-1 block font-display text-[1.9rem] leading-none tracking-wide">
+                  <span className="mt-1 block font-display text-[1.35rem] leading-none tracking-wide lg:text-[1.9rem]">
                     {ja ? recipe.titleJa : recipe.titleEn}
                   </span>
-                  <span className="mt-2 block text-sm text-black/60">
+                  <span className="mt-1.5 block text-xs text-black/60 lg:mt-2 lg:text-sm">
                     {ja ? recipe.titleEn : recipe.titleJa}
                   </span>
                 </button>
@@ -984,11 +1035,12 @@ function RecipeBoard({
             );
           })}
         </ul>
+        </div>
 
         <article
           id="recipe-preview"
           aria-live="polite"
-          className="relative overflow-hidden border-[6px] border-black bg-white shadow-[8px_8px_0px_0px_#F3C63F]"
+          className="relative overflow-hidden border-4 border-black bg-white shadow-[6px_6px_0px_0px_#F3C63F] sm:border-[6px] sm:shadow-[8px_8px_0px_0px_#F3C63F]"
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -998,12 +1050,12 @@ function RecipeBoard({
               exit={{ opacity: 0, x: -28 }}
               transition={{ duration: 0.25 }}
             >
-              <h2 className="border-b-[6px] border-black bg-black px-6 py-4 font-display text-[clamp(2rem,4vw,3rem)] leading-none tracking-wide text-mellow">
+              <h2 className="border-b-[6px] border-black bg-black px-4 py-3 font-display sm:px-6 sm:py-4 text-[clamp(2rem,4vw,3rem)] leading-none tracking-wide text-mellow">
                 {ja ? selected.titleJa : selected.titleEn}
               </h2>
 
-              <div className="grid gap-7 p-5 sm:p-7 md:grid-cols-2">
-                <section className="halftone border-4 border-black bg-parchment p-5 md:col-span-2">
+              <div className="grid gap-6 p-4 sm:gap-7 sm:p-7 md:grid-cols-2">
+                <section className="halftone border-4 border-black bg-parchment p-4 sm:p-5 md:col-span-2">
                   <h3 className="font-display text-2xl tracking-wide text-rose">{t.backstory}</h3>
                   <p className="mt-2 text-[1.05rem] leading-relaxed">
                     {ja ? selected.backstoryJa : selected.backstoryEn}
