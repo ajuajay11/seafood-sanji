@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Bangers, Dela_Gothic_One, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
+
+const GTM_ID = "GTM-ML8C2V72";
+const GA_ID = "G-C2H21VCJ2T";
 
 /* Bangers for the comic headings; Dela Gothic One covers the Japanese
    characters Bangers lacks; Noto Sans JP sets the body copy in both languages. */
@@ -47,7 +51,38 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${bangers.variable} ${dela.variable} ${noto.variable}`}
     >
-      <body className="min-h-dvh">{children}</body>
+      <head>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', '${GA_ID}');`}
+        </Script>
+        <Script id="gtm" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_ID}');`}
+        </Script>
+      </head>
+      <body className="min-h-dvh">
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+            title="Google Tag Manager"
+          />
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }
