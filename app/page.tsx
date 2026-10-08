@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import Link from "next/link";
+import { recipes } from "./recipes-data";
+import Image, { getImageProps } from "next/image";
 import ZoroGame from "./zoro-game";
 import MusicToggle from "./music-toggle";
 import { playSound } from "./sound-events";
@@ -12,7 +14,7 @@ import {
   useAnimationControls,
   useReducedMotion,
 } from "framer-motion";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 /* ─────────────────────────── Translation dictionary ─────────────────────────── */
 
@@ -70,123 +72,6 @@ const translations = {
 type Lang = keyof typeof translations;
 type Dictionary = (typeof translations)[Lang];
 
-/* ───────────────────────────── Sanji's cookbook ────────────────────────────── */
-
-const recipes = [
-  {
-    id: "seafood-risotto",
-    titleEn: "Gin's Seafood Risotto",
-    titleJa: "ギンに捧げる海鮮リゾット",
-    backstoryEn:
-      "Prepared for Gin at the Baratie. A legendary dish crafted out of absolute kindness, refusing to let an enemy starve.",
-    backstoryJa: "バラティエでギンのために作った、空腹の敵に差し出された伝説の人情料理。",
-    ingredientsEn: [
-      "Arborio rice",
-      "Fresh king prawns, cleaned",
-      "Squid tentacles, chopped",
-      "Warm vegetable stock",
-      "Minced onion",
-      "Olive oil and butter",
-    ],
-    ingredientsJa: ["リゾット米", "新鮮なエビ", "刻んだイカ", "温かい野菜ブイヨン", "玉ねぎのみじん切り", "オリーブオイルとバター"],
-    stepsEn: [
-      "Soften the onion in olive oil, then stir in the dry rice.",
-      "Add warm stock a ladle at a time, stirring as the rice absorbs it.",
-      "Sauté the prawns and squid separately until cooked through.",
-      "When the rice is tender with a slight bite, fold in the seafood and butter. Serve creamy.",
-    ],
-    stepsJa: [
-      "オリーブオイルで玉ねぎを炒め、生米を加える。",
-      "温かいブイヨンをお玉一杯ずつ加え、吸わせながら混ぜる。",
-      "別のフライパンでエビとイカにしっかり火を通す。",
-      "米に少し歯ごたえが残る程度に煮えたら、魚介とバターを混ぜて仕上げる。",
-    ],
-  },
-  {
-    id: "soba-noodles",
-    titleEn: "Sangoro's Special Soba",
-    titleJa: "サンゴロウ特製そば",
-    backstoryEn:
-      "Cooked undercover in the Flower Capital of Wano. The broth is so beautifully refined it created a massive, line-blocking crowd.",
-    backstoryJa: "ワノ国の花の都で身を隠しながら作った、大行列を生み出した極上出汁の蕎麦。",
-    ingredientsEn: [
-      "Handmade buckwheat soba noodles",
-      "Wano dashi broth",
-      "Tempura shrimp flakes",
-      "Mirin",
-      "Soba dipping sauce",
-    ],
-    ingredientsJa: ["手打ち蕎麦", "ワノ国特製出汁", "天かす", "みりん", "濃口蕎麦つゆ"],
-    stepsEn: [
-      "Boil buckwheat noodles for exactly 4 minutes.",
-      "Shock instantly in icy well water to keep the bite firm.",
-      "Simmer the dashi broth until deep and aromatic.",
-      "Serve beautifully inside a heavy traditional Wano ceramic bowl.",
-    ],
-    stepsJa: [
-      "蕎麦を正確に4分間茹でる。",
-      "すぐに冷水で締めて、コシをしっかりと残す。",
-      "出汁をじっくりと煮詰め、深い香りを引き出す。",
-      "ワノ国の伝統的な漆器に美しく盛り付ける。",
-    ],
-  },
-  {
-    id: "potato-paille",
-    titleEn: "Early Summer Potato Paille",
-    titleJa: "初夏のじゃがいものパイユ",
-    backstoryEn: "A crisp snack Sanji serves aboard the Going Merry after the encounter with Aokiji, before the crew reaches Water 7.",
-    backstoryJa: "青キジとの遭遇後、ウォーターセブンへ向かう途中のメリー号でサンジが振る舞った軽食。",
-    ingredientsEn: ["Potatoes", "Neutral frying oil", "Salt", "Chopped parsley"],
-    ingredientsJa: ["じゃがいも", "揚げ油", "塩", "刻みパセリ"],
-    stepsEn: ["Cut potatoes into thin matchsticks.", "Rinse off the starch and dry thoroughly.", "Fry in small batches at 175°C until golden and crisp.", "Drain, season with salt and parsley, and serve warm."],
-    stepsJa: ["じゃがいもを細い千切りにする。", "水ででんぷんを洗い流し、水気を十分に拭き取る。", "175℃の油で少量ずつ、きつね色になるまで揚げる。", "油を切り、塩とパセリを振って温かいうちに出す。"],
-  },
-  {
-    id: "sunny-pizza",
-    titleEn: "Sunny's Dinner Pizza",
-    titleJa: "サニー号の夕食ピザ",
-    backstoryEn: "Sanji makes pizza on the voyage to Dressrosa. Kin'emon is intrigued by this unfamiliar meal.",
-    backstoryJa: "ドレスローザへの航海中、サンジが夕食に作ったピザ。見慣れない料理に錦えもんも興味津々。",
-    ingredientsEn: ["Pizza dough", "Tomato sauce", "Mozzarella", "Basil", "Olive oil"],
-    ingredientsJa: ["ピザ生地", "トマトソース", "モッツァレラ", "バジル", "オリーブオイル"],
-    stepsEn: ["Heat the oven to 240°C with a baking tray inside.", "Stretch the dough on baking parchment.", "Spread with tomato sauce and scatter over mozzarella.", "Transfer to the hot tray and bake for 10–15 minutes until golden. Finish with basil and olive oil."],
-    stepsJa: ["天板を入れたオーブンを240℃に予熱する。", "クッキングシートの上で生地を伸ばす。", "トマトソースを塗り、モッツァレラを散らす。", "熱い天板に移し、10〜15分焼く。バジルとオリーブオイルで仕上げる。"],
-  },
-  {
-    id: "baratie-soup",
-    titleEn: "Baratie Farewell Soup",
-    titleJa: "バラティエの旅立ちスープ",
-    backstoryEn: "Before Sanji leaves Baratie, the cooks criticize his delicious soup to help push him toward his dream.",
-    backstoryJa: "サンジの旅立ちを後押しするため、バラティエのコックたちが、実はおいしいスープをわざとけなす。",
-    ingredientsEn: ["Vegetable stock", "Onion", "Carrot", "Celery", "Butter", "Salt and black pepper"],
-    ingredientsJa: ["野菜ブイヨン", "玉ねぎ", "にんじん", "セロリ", "バター", "塩と黒こしょう"],
-    stepsEn: ["Dice the onion, carrot, and celery.", "Soften the vegetables in butter over medium heat.", "Pour in the stock and simmer until the vegetables are tender.", "Season to taste and serve. This vegetable version is a fan interpretation."],
-    stepsJa: ["玉ねぎ、にんじん、セロリを角切りにする。", "中火でバターを溶かし、野菜を炒める。", "ブイヨンを注ぎ、野菜が柔らかくなるまで煮る。", "塩こしょうで味を調えて出す。この野菜スープはファンによるアレンジ。"],
-  },
-  {
-    id: "sky-fish",
-    titleEn: "Skypiea Grilled Sky Fish",
-    titleJa: "空島の焼き空魚",
-    backstoryEn: "In Skypiea, Sanji tries cooking sky fish and learns about their preparation from Pagaya. This version uses ordinary white fish.",
-    backstoryJa: "空島で空魚の調理に挑戦し、パガヤから調理法を学ぶサンジ。ここでは普通の白身魚で再現。",
-    ingredientsEn: ["White fish fillets", "Olive oil", "Lemon", "Salt and black pepper", "Fresh herbs"],
-    ingredientsJa: ["白身魚の切り身", "オリーブオイル", "レモン", "塩と黒こしょう", "ハーブ"],
-    stepsEn: ["Pat the fish dry and brush with olive oil.", "Season with salt, pepper, and herbs.", "Grill or pan-fry until opaque and cooked through, reaching 63°C at the center.", "Serve with lemon wedges for a taste of the White Sea."],
-    stepsJa: ["魚の水気を拭き、オリーブオイルを塗る。", "塩、こしょう、ハーブで下味を付ける。", "グリルかフライパンで、中心温度63℃を目安にしっかり火を通す。", "レモンを添え、白海の気分で味わう。"],
-  },
-  {
-    id: "whole-cake",
-    titleEn: "Whole Cake Island Celebration Cake",
-    titleJa: "ホールケーキアイランドのケーキ",
-    backstoryEn: "Sanji, Pudding, and Chiffon make a replacement wedding cake to stop Big Mom's rampage. Sanji contributes his extraordinary Simsim Whip cream.",
-    backstoryJa: "ビッグ・マムの暴走を止めるため、サンジ、プリン、シフォンが作った代わりのウェディングケーキ。サンジは極上のシムシムホイップを担当。",
-    ingredientsEn: ["Ready-made chocolate sponge cake", "Cold whipping cream", "Icing sugar", "Vanilla extract", "Chocolate shavings", "Fresh strawberries"],
-    ingredientsJa: ["市販のチョコスポンジ", "冷たい生クリーム", "粉砂糖", "バニラエッセンス", "削ったチョコレート", "いちご"],
-    stepsEn: ["Whip the cold cream with icing sugar and vanilla to soft peaks.", "Slice the sponge into layers and spread cream between them.", "Cover with more cream and decorate with chocolate and strawberries.", "Chill until serving. This small fan version stands in for the story's giant cake and fictional cream."],
-    stepsJa: ["冷たい生クリームに粉砂糖とバニラを加え、柔らかい角が立つまで泡立てる。", "スポンジを切り分け、間にクリームを塗る。", "表面にもクリームを塗り、チョコといちごで飾る。", "食べるまで冷蔵する。巨大ケーキと架空のクリームを手軽にアレンジしたファン版。"],
-  },
-];
-
 /* ────────────────────────────────── Assets ─────────────────────────────────── */
 
 /** The intro, in order. It plays once and rests on the last frame. */
@@ -208,7 +93,7 @@ type Mood = "idle" | "zoro" | "female" | "other";
 const PORTRAITS: Record<Mood, { src: string; alt: string }> = {
   idle: {
     src: "/images/sanji_sequence_10.webp",
-    alt: "Sanji smiling proudly, presenting an open casserole dish",
+    alt: "Seafood Sanji presenting a fresh seafood casserole in his sea kitchen",
   },
   zoro: { src: "/images/sanji_face_fire_angry.webp", alt: "Sanji, furious, framed by flames" },
   female: {
@@ -306,11 +191,17 @@ function clearGuest() {
 const withName = (line: string, name: string) => line.replaceAll("{name}", name);
 
 /** Fetches and decodes each image up front, so a swap never shows an empty frame. */
-function preloadImages(sources: string[]) {
+const HERO_SIZES = "(min-width: 1152px) 1092px, (min-width: 640px) calc(100vw - 60px), calc(100vw - 44px)";
+const PORTRAIT_SIZES = "(min-width: 896px) 368px, (min-width: 768px) calc((100vw - 44px) * 5 / 12), calc(100vw - 44px)";
+
+function preloadImages(sources: string[], sizes: string) {
   return Promise.all(
     sources.map((src) => {
       const image = new window.Image();
-      image.src = src;
+      const { props } = getImageProps({ src, alt: "", fill: true, sizes });
+      image.sizes = props.sizes ?? sizes;
+      image.srcset = props.srcSet ?? "";
+      image.src = props.src;
       return image.decode().catch(() => undefined);
     }),
   );
@@ -385,7 +276,7 @@ export default function SanjiSeaKitchen() {
       setPhase(stored ? "menu" : "dialogue");
     };
 
-    preloadImages(SEQUENCE).then(() => {
+    preloadImages(SEQUENCE, HERO_SIZES).then(() => {
       if (cancelled) return;
       if (prefersReducedMotion()) {
         settle();
@@ -401,7 +292,7 @@ export default function SanjiSeaKitchen() {
     });
 
     // The faces the dialogue can switch to, warmed while the intro plays.
-    preloadImages(Object.values(PORTRAITS).map((portrait) => portrait.src));
+    preloadImages(Object.values(PORTRAITS).map((portrait) => portrait.src), PORTRAIT_SIZES);
 
     return () => {
       cancelled = true;
@@ -436,20 +327,23 @@ export default function SanjiSeaKitchen() {
     document.documentElement.style.overflow = overlay ? "hidden" : "";
   }, [overlay]);
 
-  // During an overlay the disclaimer footer is pinned over the bottom of the screen. Publish its
+  // Pin the disclaimer from the first paint through the intro and overlays, so
+  // finishing the intro doesn't move it from document flow into the viewport.
+  const pinnedFooter = phase !== "menu";
+  // Publish the pinned footer's
   // height as --footer-h so the dialog can pad its scroll area and never hide content behind it
   // (on phones the footer wraps to several lines).
   const footer = useRef<HTMLElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = footer.current;
     if (!element) return;
     const root = document.documentElement;
-    const publish = () => root.style.setProperty("--footer-h", `${overlay ? element.offsetHeight : 0}px`);
+    const publish = () => root.style.setProperty("--footer-h", `${pinnedFooter ? element.offsetHeight : 0}px`);
     publish();
     const observer = new ResizeObserver(publish);
     observer.observe(element);
     return () => { observer.disconnect(); root.style.removeProperty("--footer-h"); };
-  }, [overlay]);
+  }, [pinnedFooter]);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -470,6 +364,33 @@ export default function SanjiSeaKitchen() {
         ) : (
           <HeroStage frame={frame} loading={phase === "loading"} />
         )}
+
+        <section
+          aria-labelledby="journey-title"
+          className="mx-auto w-full max-w-6xl px-4 pt-8 pb-[calc(var(--footer-h,0px)+3rem)] sm:px-6"
+        >
+          <div className="space-y-4 border-4 border-black bg-parchment p-5 shadow-[6px_6px_0_#000] sm:p-8">
+            <h2 id="journey-title" className="font-display text-3xl sm:text-4xl">
+              {lang === "ja" ? "サンジの海鮮レシピと料理の旅" : "Sanji seafood recipes & a manga culinary journey"}
+            </h2>
+            <p>
+              {lang === "ja"
+                ? "『ワンピース』に着想を得た海のキッチンへようこそ。サンジ風の海鮮リゾットや焼き魚をはじめ、蕎麦、ピザ、スープ、ケーキなど、7つのファンレシピを材料や作り方とともに楽しめます。"
+                : "Welcome to a One Piece-inspired seafood kitchen. Explore Sanji seafood dishes such as Gin's Seafood Risotto and Skypiea Grilled Sky Fish, alongside soba, pizza, soup and celebration cake. Each of the seven fan recipes includes ingredients, cooking steps and story context."}
+            </p>
+            <h3 className="font-display text-2xl">
+              {lang === "ja" ? "インタラクティブな漫画のキッチンを楽しもう" : "Explore the interactive manga food adventure"}
+            </h3>
+            <p>
+              {lang === "ja"
+                ? "アニメーションとキャラクターのリアクションを楽しみながら、英語・日本語の会話を切り替えて料理の旅を進めましょう。非公式のファンパロディであり、料理は家庭向けのアレンジです。"
+                : "Follow Sanji's culinary journey through animated scenes, playful character reactions and English or Japanese dialogue. This interactive manga cooking adventure is an unofficial fan parody, and the recipes are home-kitchen interpretations of dishes from the story."}
+            </p>
+            <Link href="/recipes" className="inline-block font-bold underline underline-offset-4">
+              {lang === "ja" ? "7つのレシピ・材料・作り方を見る" : "Browse all seven Sanji-inspired recipes, ingredients & cooking methods"}
+            </Link>
+          </div>
+        </section>
 
         <AnimatePresence>
           {(phase === "dialogue" || phase === "welcome") && (
@@ -499,10 +420,13 @@ export default function SanjiSeaKitchen() {
       <footer
         ref={footer}
         className={`border-t-2 border-black bg-parchment px-4 py-3 text-center text-xs leading-relaxed sm:text-sm ${
-          overlay ? "fixed inset-x-0 bottom-0 z-[110]" : "relative"
+          pinnedFooter ? "fixed inset-x-0 bottom-0 z-[110]" : "relative"
         }`}
       >
         <p className="mx-auto max-w-3xl">{t.humorNote}</p>
+        <Link href="/recipes" className="mt-1 inline-block font-bold underline underline-offset-2">
+          {lang === "ja" ? "レシピとよくある質問" : "Browse recipes & frequently asked questions"}
+        </Link>
       </footer>
     </MotionConfig>
   );
@@ -574,7 +498,7 @@ function HeroStage({ frame, loading }: { frame: number; loading: boolean }) {
             alt={index === LAST_FRAME ? PORTRAITS.idle.alt : ""}
             aria-hidden={index !== frame}
             fill
-            sizes="(min-width: 1152px) 1104px, 100vw"
+            sizes={HERO_SIZES}
             preload={index === 0}
             loading={index === 0 ? undefined : "eager"}
             className={`object-cover ${index === frame ? "opacity-100" : "opacity-0"}`}
@@ -738,7 +662,7 @@ function DialogueModal({
                       src={portrait.src}
                       alt={portrait.alt}
                       fill
-                      sizes="(min-width: 768px) 360px, 100vw"
+                      sizes={PORTRAIT_SIZES}
                       loading="eager"
                       className="object-cover"
                     />
@@ -1023,7 +947,7 @@ function RecipeBoard({
             src={PORTRAITS.female.src}
             alt=""
             fill
-            sizes="112px"
+            sizes="(min-width: 640px) 104px, 48px"
             loading="eager"
             className="object-cover object-top"
           />

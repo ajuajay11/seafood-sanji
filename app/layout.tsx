@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Bangers, Dela_Gothic_One, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./site-info";
 
 const GTM_ID = "GTM-ML8C2V72";
 const GA_ID = "G-C2H21VCJ2T";
@@ -26,18 +27,37 @@ const noto = Noto_Sans_JP({
   variable: "--font-noto",
 });
 
-const title = "Sanji's Sea Kitchen | Interactive Manga Culinary Journey";
-const description =
-  "Step inside the kitchen of the Straw Hat Pirates' legendary master chef. Explore Sanji's story-driven dishes, complete with localized ingredients, manga history, and secret culinary methods.";
+const title = "Seafood Sanji - Interactive One Piece Culinary Journey & Recipes";
+const description = SITE_DESCRIPTION;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  verification: {
+    google: "eXeVtnOJdRehcT75pKnPb4OJSiaI4xq2yinFA3wkheU",
+  },
   title,
   description,
+  keywords: ["seafood sanji", "sanji seafood", "sanji sea kitchen", "one piece recipes", "sanji cooking game"],
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+  },
   openGraph: {
     type: "website",
+    title: "Seafood Sanji - Interactive Manga Culinary Journey",
+    description: "Join Sanji in the kitchen for an interactive One Piece culinary experience.",
+    siteName: SITE_NAME,
+    url: "/",
+    locale: "en_US",
+    images: [{ url: "/images/sanji_sequence_10.webp", width: 1479, height: 900, alt: "Seafood Sanji presenting a fresh seafood casserole in his sea kitchen" }],
+  },
+  twitter: {
+    card: "summary_large_image",
     title,
     description,
-    siteName: "Sanji's Sea Kitchen",
+    images: ["/images/sanji_sequence_10.webp"],
   },
 };
 
@@ -82,6 +102,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         {children}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "@id": `${SITE_URL}/#website`,
+          url: `${SITE_URL}/`,
+          name: SITE_NAME,
+          description,
+          inLanguage: ["en", "ja"],
+        }).replace(/</g, "\\u003c") }} />
       </body>
     </html>
   );
